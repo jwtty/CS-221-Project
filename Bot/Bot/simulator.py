@@ -5,12 +5,13 @@ import sys
 import traceback
 import random
 import time
+import copy
+import timeit
 
 from . import board
 from . import player
-import time
-import timeit
 from . import minimax
+from . import state
 
 Mapper = {0:"1", 1:"2", 2:".", 3:"*"}
 PLAYER1, PLAYER2, EMPTY, BLOCKED = [0, 1, 2, 3]
@@ -31,71 +32,14 @@ class Game():
         self.last_timebank = 0
         self.players = [player.Player(), player.Player()]
 
+        self.current_state = None
+        self.previous_state = None
+
     def my_player(self):
         return self.players[self.my_botid]
 
     def other_player(self):
         return self.players[self.other_botid]
-
-    def update(self, data):
-        'parse input'
-        # start timer
-        self.last_update = time.time()
-        for line in data.split('\n'):
-            line = line.strip()
-            if len(line) > 0:
-                tokens = line.split()
-                key0 = tokens[0]
-                if key0 == "settings":
-                    key1 = tokens[1]
-                    if key1 == "timebank":
-                        self.timebank = int(tokens[2])
-                    if key1 == "time_per_move":
-                        self.time_per_move = int(tokens[2])
-                    if key1 == "player_names":
-                        self.player_names = tokens[2].split(',')
-                    if key1 == "your_bot":
-                        self.my_bot = tokens[2]
-                    if key1 == "your_botid":
-                        self.my_botid = int(tokens[2])
-                        self.other_botid = 1 - self.my_botid
-                    if key1 == "field_width":
-                        self.field_width = int(tokens[2])
-                    if key1 == "field_height":
-                        self.field_height = int(tokens[2])
-                elif key0 == "update":
-                    key1 = tokens[1]
-                    if key1 == "game":
-                        key2 = tokens[2]
-                        if key2 == "round":
-                            self.round = int(tokens[3])
-                        elif key2 == "field":
-                            if self.field == None:
-                                self.field = board.Board(self.field_width, self.field_height)
-                            self.field.parse(self.players, tokens[3])
-                elif key0 == "action" and tokens[1] == "move":
-                    self.last_timebank = int(tokens[2])
-                    # Launching bot logic happens after setup finishes
-                elif key0 == "quit":
-                    pass
-
-
-    def time_remaining(self):
-        return self.last_timebank - int(1000 * (time.clock() - self.last_update))
-
-    def issue_order(self, order, player_id = 0):
-        """issue an order, noting that (col, row) is the expected output
-        however internally, (row, col) is used."""
-        #order is ((delta_row, delta_col), string)
-        #self.players[player_id].row + order[0][0]
-        #self.players[player_id].col + order[0][1]
-        #update field
-        return
-    def issue_order_pass(self, player_id = 0):
-        """ pass the turn """
-        return
-        sys.stdout.write('pass\n')
-        sys.stdout.flush()
 
     def update_field(self, move1, move2):
         """
@@ -107,12 +51,12 @@ class Game():
         if not move1 or not move2:
             #game ended
             return
-        p1_r, p1_c = self.players[0].row, self.players[0].col
-        p2_r, p2_c = self.players[1].row, self.players[1].col
-        self.field.cell[p1_r][p1_c]=BLOCKED
-        self.field.cell[p2_r][p2_c]=BLOCKED
-        self.field.cell[p1_r + move1[0][0]][p1_c + move1[0][1]]=PLAYER1
-        self.field.cell[p2_r + move2[0][0]][p2_c + move2[0][1]]=PLAYER2
+        p1_r, p1_c = self.current_state.players[0].row, self.current_state.players[0].col
+        p2_r, p2_c = self.current_state.players[1].row, self.current_state.players[1].col
+        self.current_state.board.cell[p1_r][p1_c]=BLOCKED
+        self.current_state.board.cell[p2_r][p2_c]=BLOCKED
+        self.current_state.board.cell[p1_r + move1[0][0]][p1_c + move1[0][1]]=PLAYER1
+        self.current_state.board.cell[p2_r + move2[0][0]][p2_c + move2[0][1]]=PLAYER2
 
     def update_players(self, move1, move2):
         """
@@ -124,10 +68,10 @@ class Game():
         if not move1 or not move2:
             #game ended
             return
-        self.players[0].row += move1[0][0]
-        self.players[0].col += move1[0][1]
-        self.players[1].row += move2[0][0]
-        self.players[1].col += move2[0][1]
+        self.current_state.players[0].row += move1[0][0]
+        self.current_state.players[0].col += move1[0][1]
+        self.current_state.players[1].row += move2[0][0]
+        self.current_state.players[1].col += move2[0][1]
 
     def checkWin(self):
         """
@@ -136,32 +80,26 @@ class Game():
         :param move2: move of player2 ((row,col), string)
         :return: whether the game has ended
         """
-        if self.players[0].row == self.players[1].row and self.players[0].col == self.players[1].col:
+        if self.current_state.players[0].row == self.current_state.players[1].row and self.current_state.players[0].col == self.current_state.players[1].col:
             print("it's a draw1")
-            return False
+            return 3
         win = 0
-        move1 = self.field.legal_moves(0, self.players)
-        move2 = self.field.legal_moves(1, self.players)
+        move1 = self.current_state.board.legal_moves(0, self.players)
+        move2 = self.current_state.board.legal_moves(1, self.players)
         if not move2:
             win += 1
         if not move1:
             win += 2
         if win == 1:
             print("winner player 1")
-            return False
         elif win == 2:
             print("winner player 2")
-            return False
         elif win == 3:
             print("it's a draw2")
-            return False
-        return True
+        return win
 
-    def run(self, bot, bot2):
-        '''
-        parse input, update game state and call the bot classes do_turn method'
-        '''
-        not_finished = True
+    def initialize(self):
+        'parse input, update game state and call the bot classes do_turn method'
         self.field = board.Board(self.field_width, self.field_height)
         row = random.choice(range(self.field_height))
         col = random.choice(range(self.field_width))
@@ -169,19 +107,17 @@ class Game():
         self.players[0].col = col
         self.players[1].row = row
         self.players[1].col = self.field_width - 1 - col
-        self.field.cell[row][col]==PLAYER1
-        self.field.cell[row][self.field_width - 1 - col]==PLAYER2
-        field = ""
-        for row in range(self.field_height):
-            for col in range(self.field_width):
-                if 0 == self.field.cell[row][col]:
-                    field += Mapper[0]
-                elif 1 == self.field.cell[row][col]:
-                    field += Mapper[1]
-                else:
-                    field += Mapper[2]
-            field+="\n"
-        print(field)
+        self.field.cell[row][col]=PLAYER1
+        self.field.cell[row][self.field_width - 1 - col]=PLAYER2
+        self.current_state = state.State(self)
+
+    def run(self, bot, bot2):
+        '''
+        parse input, update game state and call the bot classes do_turn method'
+        '''
+        not_finished = True
+        self.initialize()
+        self.current_state.board.output()
         while(not_finished):
             print("========================================")
             if True:
@@ -202,21 +138,9 @@ class Game():
                     self.update_players(move1, move2)
                     #check if game ended
                     
-                    field = ""
-                    not_finished = self.checkWin()
+                    not_finished = not self.checkWin()
                     
-                    for row in range(self.field_height):
-                        for col in range(self.field_width):
-                            if 3 == self.field.cell[row][col]:
-                                field += Mapper[3]
-                            elif 0 == self.field.cell[row][col]:
-                                field += Mapper[0]
-                            elif 1 == self.field.cell[row][col]:
-                                field += Mapper[1]
-                            else:
-                                field += Mapper[2]
-                        field += "\n"
-                    print(field)
+                    self.current_state.board.output()
                 print("========================================")
                 
                 #print end1 - start1, end2 - start2

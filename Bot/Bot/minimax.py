@@ -38,7 +38,7 @@ def allDirEvalFunc(curState, agent):
         counts = [None, None]
         minSum = -1
         mid = count // 2
-        for i in range(1, mid):
+        for i in range(mid, count):
             row = my_player.row + dir[0]*i
             col = my_player.col + dir[1]*i
             sumCounter = 0
@@ -341,7 +341,7 @@ class SearchAgent():
     '''
     Parent class for minimaxAgent and AlphabetaAgent
     '''
-    def __init__(self, evalFunc = attackAndBlockEvalFunc, depth = 2):
+    def __init__(self, evalFunc = allDirEvalFunc, depth = 2):
         self.evaluationFunction = evalFunc
         self.depth = depth
     
@@ -354,6 +354,7 @@ class MinimaxAgent(SearchAgent):
     
     def getAction(self, curAgent, gameState):
         depth = self.depth
+        #print depth
         def actionAndScore(curState, depth, agent):
             legalActions = curState.getLegalActions(agent)
             if depth == 0:

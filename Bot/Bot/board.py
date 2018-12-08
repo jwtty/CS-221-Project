@@ -8,8 +8,8 @@ CHARTABLE = [(PLAYER1, S_PLAYER1), (PLAYER2, S_PLAYER2), (EMPTY, S_EMPTY), (BLOC
 
 DIRS = [
     ((-1, 0), "up"),
-    ((0, 1), "right"),
     ((1, 0), "down"),
+    ((0, 1), "right"),
     ((0, -1), "left")
 ]
 
@@ -99,7 +99,6 @@ class Board:
             sys.stderr.write("!")
             done = True
                 
-
     def output(self):
         for row in self.cell:
             sys.stderr.write("\n")
@@ -108,4 +107,10 @@ class Board:
         sys.stderr.write("\n")
         sys.stderr.flush()
 
-
+    def tostring(self):
+        res = ""
+        for row in xrange(self.height):
+            for col in xrange(self.width):
+                res += str(self.cell[row][col])
+            res += ","
+        return res
