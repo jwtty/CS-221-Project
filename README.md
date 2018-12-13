@@ -21,9 +21,12 @@ Enter the `Bot` directory, and run `main.py`. It will automatically start traini
 
 ## Parameters
 ```
---mode  # game|rl change mode fron Q-Learning to minimax competition
---grid  6 # change the grid size to 6
+--mode game|rl # change mode fron Q-Learning to minimax competition
+--grid 6 # change the grid size to 6
 --rl_trial 10000 # change Q-Learning trial number to 10000
+--test_rl # whether to test a trained Q-Learning agent
+--rl_weights weights.txt # read from weights.txt to get learned parameters for Q-Learning agent
+--rl_save file.txt # save learned paraments for Q-Learning agent
 ```
 For more details, run
 ```
