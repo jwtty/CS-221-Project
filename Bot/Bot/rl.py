@@ -87,7 +87,7 @@ class RLAlgorithm(object):
             rewards = []
 
             while not game.current_state.isEnd(0):
-                action1 = bot1.do_turn(mmAgent = minimax.MinimaxAgent(evalFunc = minimax.allDirEvalFunc, depth = 3))
+                action1 = bot1.do_turn(mmAgent = minimax.MinimaxAgent(evalFunc = minimax.attackAndBlockEvalFunc, depth = 4))
                 actionRL = self.getAction(game.current_state, 1) # hard code...
                 game.previous_state = deepcopy(game.current_state)
                 game.update_field(action1, actionRL)
